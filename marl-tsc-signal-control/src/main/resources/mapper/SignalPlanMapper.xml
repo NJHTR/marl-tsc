@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.njhtr.marltsc.signal.infrastructure.mapper.SignalPlanMapper">
+
+    <resultMap id="BaseResultMap" type="com.njhtr.marltsc.signal.domain.entity.SignalPlan">
+        <id column="plan_id" property="planId"/>
+        <result column="intersection_id" property="intersectionId"/>
+        <result column="plan_name" property="planName"/>
+        <result column="cycle_time" property="cycleTime"/>
+        <result column="status" property="status"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        plan_id, intersection_id, plan_name, cycle_time, status, create_time, update_time
+    </sql>
+
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM signal_plan
+        WHERE plan_id = #{planId}
+    </select>
+
+    <select id="selectByIntersectionId" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM signal_plan
+        WHERE intersection_id = #{intersectionId}
+        ORDER BY create_time DESC
+    </select>
+
+    <insert id="insert">
+        INSERT INTO signal_plan (
+            plan_id, intersection_id, plan_name, cycle_time, status, create_time, update_time
+        ) VALUES (
+            #{planId}, #{intersectionId}, #{planName}, #{cycleTime}, #{status}, #{createTime}, #{updateTime}
+        )
+    </insert>
+
+    <update id="update">
+        UPDATE signal_plan
+        SET
+            intersection_id = #{intersectionId},
+            plan_name = #{planName},
+            cycle_time = #{cycleTime},
+            status = #{status},
+            update_time = #{updateTime}
+        WHERE plan_id = #{planId}
+    </update>
+
+</mapper>

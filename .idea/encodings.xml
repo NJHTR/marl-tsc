@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="Encoding">
+    <file url="file://$PROJECT_DIR$/marl-tsc-co-optimization/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/marl-tsc-common/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/marl-tsc-data-fusion/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/marl-tsc-drl-engine/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/marl-tsc-route-planning/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/marl-tsc-signal-control/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/marl-tsc-stream/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/marl-tsc-web/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/src/main/resources" charset="UTF-8" />
+  </component>
+</project>
