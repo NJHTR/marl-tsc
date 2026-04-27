@@ -23,16 +23,17 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
         </dependency>
 
-        <!-- 内部依赖 -->
+        <!-- Internal common module -->
         <dependency>
             <groupId>com.njhtr</groupId>
             <artifactId>marl-tsc-common</artifactId>
             <version>${project.version}</version>
         </dependency>
 
-        <!-- DL4J 深度学习 -->
+        <!-- DL4J Deep Learning -->
         <dependency>
             <groupId>org.deeplearning4j</groupId>
             <artifactId>deeplearning4j-core</artifactId>
@@ -42,17 +43,26 @@
             <artifactId>nd4j-native-platform</artifactId>
         </dependency>
 
-        <!-- Redis 状态缓存 -->
+        <!-- Redis for model/state persistence -->
         <dependency>
             <groupId>redis.clients</groupId>
             <artifactId>jedis</artifactId>
         </dependency>
 
-        <!-- 工具 -->
+        <!-- Lombok -->
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <scope>provided</scope>
         </dependency>
     </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
 </project>

@@ -1,2 +1,22 @@
 server:
-  port: 8083
+  port: 8086
+
+spring:
+  application:
+    name: drl-engine-service
+
+# DRL Engine hyperparameters
+drl:
+  state-size: 8
+  action-size: 4
+  hidden-layers: [64, 32]
+  learning-rate: 0.001
+  gamma: 0.95
+  epsilon-init: 1.0
+  epsilon-min: 0.01
+  epsilon-decay: 0.995
+  replay-buffer-capacity: 10000
+  batch-size: 32
+  target-update-freq: 100
+  train-freq: 4
+  green-time-step: 5
