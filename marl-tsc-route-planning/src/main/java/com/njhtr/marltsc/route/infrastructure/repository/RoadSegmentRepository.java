@@ -8,7 +8,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface RoadSegmentRepository extends Neo4jRepository<RoadSegment, String> {
+public interface RoadSegmentRepository extends Neo4jRepository<RoadSegment, Long> {
 
     @Query("MATCH (from:Intersection {id: $fromId})-[r:ROAD_SEGMENT]->(to:Intersection {id: $toId}) RETURN r, to")
     List<RoadSegment> findByFromIdAndToId(String fromId, String toId);

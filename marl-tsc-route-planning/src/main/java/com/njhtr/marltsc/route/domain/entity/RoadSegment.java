@@ -1,6 +1,7 @@
 package com.njhtr.marltsc.route.domain.entity;
 
 import lombok.Data;
+import org.springframework.data.neo4j.core.schema.GeneratedValue;
 import org.springframework.data.neo4j.core.schema.Id;
 import org.springframework.data.neo4j.core.schema.Property;
 import org.springframework.data.neo4j.core.schema.RelationshipProperties;
@@ -10,7 +11,8 @@ import org.springframework.data.neo4j.core.schema.TargetNode;
 @RelationshipProperties
 public class RoadSegment {
     @Id
-    private String id;
+    @GeneratedValue
+    private Long id;
     private Double length;
     private Integer lanes;
     private Double freeFlowSpeed;

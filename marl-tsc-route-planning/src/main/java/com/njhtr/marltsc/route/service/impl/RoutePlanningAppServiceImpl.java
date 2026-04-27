@@ -89,6 +89,22 @@ public class RoutePlanningAppServiceImpl implements RoutePlanningAppService {
         return alternatives;
     }
 
+    @Override
+    public Map<String, Double> getNetworkStatus() {
+        List<RoadSegment> segments = roadSegmentRepository.findAll();
+        Map<String, Double> status = new HashMap<>();
+        for (RoadSegment segment : segments) {
+            Double travelTime = segment.getCurrentTravelTime();
+            if (travelTime == null || travelTime <= 0) {
+                travelTime = segment.getLength() != null && segment.getFreeFlowSpeed() != null && segment.getFreeFlowSpeed() > 0
+                        ? segment.getLength() / segment.getFreeFlowSpeed()
+                        : 0.0;
+            }
+            status.put(String.valueOf(segment.getId()), travelTime);
+        }
+        return status;
+    }
+
     private Map<String, IntersectionNode> loadNodes() {
         return intersectionRepository.findAll().stream()
                 .collect(Collectors.toMap(IntersectionNode::getId, n -> n));
@@ -107,7 +123,7 @@ public class RoutePlanningAppServiceImpl implements RoutePlanningAppService {
                     : (s.getLength() != null && s.getFreeFlowSpeed() != null && s.getFreeFlowSpeed() > 0)
                     ? s.getLength() / s.getFreeFlowSpeed()
                     : Double.MAX_VALUE;
-            map.put(s.getId(), time);
+            map.put(String.valueOf(s.getId()), time);
         }
         return map;
     }
@@ -116,7 +132,7 @@ public class RoutePlanningAppServiceImpl implements RoutePlanningAppService {
         return adjacencyList.getOrDefault(fromId, Collections.emptyList()).stream()
                 .filter(s -> toId.equals(s.getToId()))
                 .findFirst()
-                .map(RoadSegment::getId)
+                .map(s -> String.valueOf(s.getId()))
                 .orElse(null);
     }
 

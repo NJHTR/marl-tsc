@@ -13,12 +13,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(BusinessException.class)
     public ApiResult<Void> handleBusinessException(BusinessException e) {
         log.warn("Business exception: {}", e.getMessage());
-        return ApiResult.fail(e.getMessage());
+        return ApiResult.fail(e.getErrorCode(), e.getMessage());
     }
 
     @ExceptionHandler(Exception.class)
     public ApiResult<Void> handleException(Exception e) {
         log.error("System exception", e);
-        return ApiResult.fail("System error: " + e.getMessage());
+        return ApiResult.fail(500, "System error: " + e.getMessage());
     }
 }

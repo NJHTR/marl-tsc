@@ -5,6 +5,9 @@ import com.njhtr.marltsc.route.domain.entity.RoadSegment;
 
 import java.util.*;
 
+import org.springframework.stereotype.Service;
+
+@Service
 public class RouteOptimizationDomainService {
 
     public List<String> computeOptimalPath(String originId, String destinationId,
@@ -54,7 +57,7 @@ public class RouteOptimizationDomainService {
                     continue;
                 }
 
-                double travelTime = predictedTravelTimes.getOrDefault(segment.getId(),
+                double travelTime = predictedTravelTimes.getOrDefault(String.valueOf(segment.getId()),
                         (segment.getLength() != null && segment.getFreeFlowSpeed() != null && segment.getFreeFlowSpeed() > 0)
                                 ? segment.getLength() / segment.getFreeFlowSpeed()
                                 : Double.MAX_VALUE);
