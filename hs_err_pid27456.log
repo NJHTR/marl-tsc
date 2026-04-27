@@ -1,0 +1,120 @@
+#
+# A fatal error has been detected by the Java Runtime Environment:
+#
+#  EXCEPTION_ACCESS_VIOLATION (0xc0000005) at pc=0x000000732f5fc280, pid=27456, tid=28332
+#
+# JRE version: OpenJDK Runtime Environment JBR-21.0.6+9-631.42-jcef (21.0.6+9) (build 21.0.6+9-b631.42)
+# Java VM: OpenJDK 64-Bit Server VM JBR-21.0.6+9-631.42-jcef (21.0.6+9-b631.42, mixed mode, sharing, tiered, compressed oops, compressed class ptrs, g1 gc, windows-amd64)
+# Problematic frame:
+# C  0x000000732f5fc280
+#
+# No core dump will be written. Minidumps are not enabled by default on client versions of Windows
+#
+# If you would like to submit a bug report, please visit:
+#   https://youtrack.jetbrains.com/issues/JBR
+#
+
+---------------  S U M M A R Y ------------
+
+Command Line: -Djava.rmi.server.hostname=127.0.0.1 -Duser.timezone=UTC -Xmx2048m -Xms128m -Djdbc.classpath=C:\Users\ACER\AppData\Local\Temp\RemoteDriver.classpath.txt --add-exports=java.desktop/sun.awt=ALL-UNNAMED --add-exports=java.desktop/java.awt.peer=ALL-UNNAMED --add-opens=java.desktop/java.awt=ALL-UNNAMED --add-opens=jdk.unsupported/sun.misc=ALL-UNNAMED --add-opens=java.base/java.nio=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED -Dfile.encoding=UTF-8 -Dsun.stdout.encoding=UTF-8 -Dsun.stderr.encoding=UTF-8 com.intellij.database.remote.RemoteJdbcServer com.mysql.cj.jdbc.Driver
+
+Host: Intel(R) Core(TM) i9-14900HX, 32 cores, 15G,  Windows 11 , 64 bit Build 26100 (10.0.26100.8246)
+Time: Mon Apr 27 14:29:10 2026  Windows 11 , 64 bit Build 26100 (10.0.26100.8246) elapsed time: 0.962289 seconds (0d 0h 0m 0s)
+
+---------------  T H R E A D  ---------------
+
+Current thread (0x0000022cc2087b90):  JavaThread "C2 CompilerThread0" daemon [_thread_in_native, id=28332, stack(0x000000732f500000,0x000000732f600000) (1024K)]
+
+
+Current CompileTask:
+C2:962 2460       4       jdk.internal.org.objectweb.asm.SymbolTable::addConstantMemberReference (147 bytes)
+
+Stack: [0x000000732f500000,0x000000732f600000],  sp=0x000000732f5fc180,  free space=1008k
+Native frames: (J=compiled Java code, j=interpreted, Vv=VM code, C=native code)
+C  0x000000732f5fc280
+
+
+siginfo: EXCEPTION_ACCESS_VIOLATION (0xc0000005), data execution prevention violation at address 0x000000732f5fc280
+
+
+Registers:
+RAX=0x000000732f5fc0c0, RBX=0x000000732f5fc260, RCX=0x0000000079c27b2a, RDX=0x0000002f7e70e85d
+RSP=0x000000732f5fc180, RBP=0x0000000000000007, RSI=0x0000000000000001, RDI=0x0000022cc80732e8
+R8 =0x0000000000000083, R9 =0x000000007ffed000, R10=0x0000000000000001, R11=0x000000732f5fc100
+R12=0x0000022cc8073bf8, R13=0x0000022cc80732e8, R14=0x00007ffea1bfdc41, R15=0x0000000000000001
+RIP=0x000000732f5fc280, EFLAGS=0x0000000000010206
+
+XMM[0]=0x0000000000000000 0x000000000091e240
+XMM[1]=0x7463657465642068 0x7061726720646142
+XMM[2]=0x0000022cc27154d8 0x0000022cc2715a80
+XMM[3]=0x0000022cc2701e58 0x0000022cc2701ec8
+XMM[4]=0x0000022cc2718f40 0x0000022cc2718fc8
+XMM[5]=0x6e69206465746365 0x7465642068706172
+XMM[6]=0x0000000000000000 0x0000000000000000
+XMM[7]=0x0000000000000000 0x0000000000000000
+XMM[8]=0x0000000000000000 0x0000000000000000
+XMM[9]=0x0000000000000000 0x0000000000000000
+XMM[10]=0x0000000000000000 0x0000000000000000
+XMM[11]=0x0000000000000000 0x0000000000000000
+XMM[12]=0x0000000000000000 0x0000000000000000
+XMM[13]=0x0000000000000000 0x0000000000000000
+XMM[14]=0x0000000000000000 0x0000000000000000
+XMM[15]=0x0000000000000000 0x0000000000000000
+  MXCSR=0x00001fa0
+
+
+Register to memory mapping:
+
+RAX=0x000000732f5fc0c0 is pointing into the stack for thread: 0x0000022cc2087b90
+RBX=0x000000732f5fc260 is pointing into the stack for thread: 0x0000022cc2087b90
+RCX=0x0000000079c27b2a is an unknown value
+RDX=0x0000002f7e70e85d is an unknown value
+RSP=0x000000732f5fc180 is pointing into the stack for thread: 0x0000022cc2087b90
+RBP=0x0000000000000007 is an unknown value
+RSI=0x0000000000000001 is an unknown value
+RDI=0x0000022cc80732e8 points into unknown readable memory: 0x00007ffea1ff35f0 | f0 35 ff a1 fe 7f 00 00
+R8 =0x0000000000000083 is an unknown value
+R9 =0x000000007ffed000 points into unknown readable memory: 0x0000000000000001 | 01 00 00 00 00 00 00 00
+R10=0x0000000000000001 is an unknown value
+R11=0x000000732f5fc100 is pointing into the stack for thread: 0x0000022cc2087b90
+R12=0x0000022cc8073bf8 points into unknown readable memory: 0x0000022cc214afd8 | d8 af 14 c2 2c 02 00 00
+R13=0x0000022cc80732e8 points into unknown readable memory: 0x00007ffea1ff35f0 | f0 35 ff a1 fe 7f 00 00
+R14=0x00007ffea1bfdc41 jvm.dll
+R15=0x0000000000000001 is an unknown value
+
+Top of Stack: (sp=0x000000732f5fc180)
+0x000000732f5fc180:   0000000000000007 00007ffea1bfdc41
+0x000000732f5fc190:   0000000000000001 0000022cc8073b30
+0x000000732f5fc1a0:   000000732f5fc560 0000022cc754ba18
+0x000000732f5fc1b0:   000000732f5fc2a0 000000732f5fc560
+0x000000732f5fc1c0:   0000022cc8073ba0 00007ffea1bfda2a
+0x000000732f5fc1d0:   0000000000000007 0000000000000001
+0x000000732f5fc1e0:   0000022cc8073b30 0000000000000000
+0x000000732f5fc1f0:   0000022ce6901e40 0000000000000000
+0x000000732f5fc200:   000000732f5fc330 0000000000000000
+0x000000732f5fc210:   0000000000000000 000000732f5fc560
+0x000000732f5fc220:   0000022cc2b76368 00007ffea1bfcb88
+0x000000732f5fc230:   000000732f5fc560 0000000000000001
+0x000000732f5fc240:   0000007300000001 000000732f5fc2a0
+0x000000732f5fc250:   0000022ce43b0000 00007ffef5985ddf
+0x000000732f5fc260:   0000022cffaefc40 0000022c00000400
+0x000000732f5fc270:   0000022cc2793650 0000007300000286
+0x000000732f5fc280:   0000022c00000080 0000022cc77f3720
+0x000000732f5fc290:   0000000000000080 0000022cffaefc40
+0x000000732f5fc2a0:   0000022cc77ecf50 0000022cc77f3110
+0x000000732f5fc2b0:   0000022cc77ecf10 0000022cffaefc40
+0x000000732f5fc2c0:   0000022cffaefc40 0000000000000004
+0x000000732f5fc2d0:   0000022cc879bf68 0000022c00000000
+0x000000732f5fc2e0:   0000000000000000 0000022cc86fdaa0
+0x000000732f5fc2f0:   0000022cc79bde60 0000022cc79b5e40
+0x000000732f5fc300:   00007ffea2238108 00007ffef58e36f7
+0x000000732f5fc310:   0000022cc79b5e00 0000022ce43b0000
+0x000000732f5fc320:   000000000000098e 0000022ce43b0000
+0x000000732f5fc330:   000000000000018c 000000000000018c
+0x000000732f5fc340:   0000000000000000 0000000000000010
+0x000000732f5fc350:   00000000c818e301 000000000000098e
+0x000000732f5fc360:   000000732f5f0101 00007ffef58dcd00
+0x000000732f5fc370:   0000000000000000 0000000000000000 
+
+Instructions: (pc=0x000000732f5fc280)
+0x000000732f5fc180:   07 00 00 00 00 00 00 00 41 dc bf a1 fe 7f 00 00

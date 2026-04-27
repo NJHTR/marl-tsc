@@ -13,7 +13,7 @@ import java.util.Map;
 @FeignClient(name = "route-planning-service", url = "http://localhost:8082")
 public interface RoutePlanningClient {
     
-    @PostMapping("/api/v1/route/compute")
+    @PostMapping("/api/v1/route/plan")
     ApiResult<RouteResponse> computeRoute(@RequestBody RouteRequest request);
     
     @GetMapping("/api/v1/route/network/status")

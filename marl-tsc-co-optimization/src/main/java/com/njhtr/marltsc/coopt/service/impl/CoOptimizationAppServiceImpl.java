@@ -44,11 +44,23 @@ public class CoOptimizationAppServiceImpl implements CoOptimizationAppService {
     public void triggerOptimization(String intersectionId) {
         log.info("Triggering optimization for intersection: {}", intersectionId);
 
-        ApiResult<SignalPlanResponse> planResult = signalControlClient.getCurrentPlan(intersectionId);
-        SignalPlanResponse currentPlan = planResult != null && planResult.getData() != null ? planResult.getData() : null;
+        // 获取信号控制计划,失败时使用null
+        SignalPlanResponse currentPlan = null;
+        try {
+            ApiResult<SignalPlanResponse> planResult = signalControlClient.getCurrentPlan(intersectionId);
+            currentPlan = planResult != null && planResult.getData() != null ? planResult.getData() : null;
+        } catch (Exception e) {
+            log.warn("Failed to get signal plan for intersection {}, proceeding without it: {}", intersectionId, e.getMessage());
+        }
 
-        ApiResult<Map<String, Double>> statusResult = routePlanningClient.getNetworkStatus();
-        Map<String, Double> networkStatus = statusResult != null && statusResult.getData() != null ? statusResult.getData() : Collections.emptyMap();
+        // 获取路网状态,失败时使用空Map降级
+        Map<String, Double> networkStatus = Collections.emptyMap();
+        try {
+            ApiResult<Map<String, Double>> statusResult = routePlanningClient.getNetworkStatus();
+            networkStatus = statusResult != null && statusResult.getData() != null ? statusResult.getData() : Collections.emptyMap();
+        } catch (Exception e) {
+            log.warn("Failed to get network status, using empty map as fallback: {}", e.getMessage());
+        }
 
         PredictedNetworkStateBO currentState = new PredictedNetworkStateBO();
         currentState.setSegmentTravelTimes(new HashMap<>(networkStatus));
@@ -102,12 +114,17 @@ public class CoOptimizationAppServiceImpl implements CoOptimizationAppService {
             }
         }
 
+        // 应用信号控制调整,失败时记录警告但继续执行
         if (bestSignalAction != null) {
-            PhaseAdjustRequest adjustRequest = new PhaseAdjustRequest();
-            adjustRequest.setIntersectionId(intersectionId);
-            adjustRequest.setPhaseId(bestSignalAction.getPhaseId());
-            adjustRequest.setGreenTime(bestSignalAction.getGreenTime());
-            signalControlClient.adjustPhase(adjustRequest);
+            try {
+                PhaseAdjustRequest adjustRequest = new PhaseAdjustRequest();
+                adjustRequest.setIntersectionId(intersectionId);
+                adjustRequest.setPhaseId(bestSignalAction.getPhaseId());
+                adjustRequest.setGreenTime(bestSignalAction.getGreenTime());
+                signalControlClient.adjustPhase(adjustRequest);
+            } catch (Exception e) {
+                log.warn("Failed to adjust signal phase for intersection {}: {}", intersectionId, e.getMessage());
+            }
         }
 
         List<RouteAdjustmentResponse> routeAdjustments = new ArrayList<>();

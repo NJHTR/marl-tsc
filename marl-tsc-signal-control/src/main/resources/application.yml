@@ -1,2 +1,15 @@
 server:
-  port: 8085
+  port: 8081
+
+spring:
+  application:
+    name: signal-control-service
+  datasource:
+    url: jdbc:mysql://localhost:3306/marl_tsc?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
+    username: root
+    password: yph20051018
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  type-aliases-package: com.njhtr.marltsc.signal.domain.entity
