@@ -41,7 +41,7 @@ public class DQNModel {
         NeuralNetConfiguration.ListBuilder builder = new NeuralNetConfiguration.Builder()
                 .seed(System.currentTimeMillis())
                 .weightInit(WeightInit.XAVIER)
-                .optimizationAlgo(OptimizationAlgorithm.ADAM)
+                .optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT)
                 .updater(new Adam(learningRate))
                 .list();
 

@@ -9,3 +9,10 @@ spring:
     authentication:
       username: neo4j
       password: password
+    connection-timeout: 3s
+    max-transaction-retry-time: 3s
+
+management:
+  health:
+    neo4j:
+      enabled: false

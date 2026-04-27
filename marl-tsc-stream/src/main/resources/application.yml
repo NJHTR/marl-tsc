@@ -1,2 +1,21 @@
 server:
   port: 8086
+
+spring:
+  application:
+    name: stream-processing-service
+
+kafka:
+  bootstrap-servers: localhost:9092
+  consumer:
+    group-id: stream-processor
+  topics:
+    input: traffic-raw-data
+    output-features: traffic-features
+    output-alerts: traffic-alerts
+
+flink:
+  parallelism:
+    default: 2
+  checkpoint:
+    interval: 5000

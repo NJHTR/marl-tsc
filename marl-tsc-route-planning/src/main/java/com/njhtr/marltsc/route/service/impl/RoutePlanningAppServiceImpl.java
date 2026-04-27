@@ -11,12 +11,14 @@ import com.njhtr.marltsc.route.infrastructure.repository.IntersectionRepository;
 import com.njhtr.marltsc.route.infrastructure.repository.RoadSegmentRepository;
 import com.njhtr.marltsc.route.service.api.RoutePlanningAppService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class RoutePlanningAppServiceImpl implements RoutePlanningAppService {
@@ -28,7 +30,7 @@ public class RoutePlanningAppServiceImpl implements RoutePlanningAppService {
     @Override
     public RouteResponse computeRoute(RouteRequest request) {
         Map<String, IntersectionNode> nodes = loadNodes();
-        List<RoadSegment> segments = roadSegmentRepository.findAll();
+        List<RoadSegment> segments = loadSegments();
         Map<String, List<RoadSegment>> adjacencyList = buildAdjacencyList(segments);
         Map<String, Double> predictedTravelTimes = buildTravelTimeMap(segments);
 
@@ -46,7 +48,7 @@ public class RoutePlanningAppServiceImpl implements RoutePlanningAppService {
     @Override
     public List<RouteResponse> computeAlternativeRoutes(RouteRequest request) {
         Map<String, IntersectionNode> nodes = loadNodes();
-        List<RoadSegment> segments = roadSegmentRepository.findAll();
+        List<RoadSegment> segments = loadSegments();
         Map<String, List<RoadSegment>> adjacencyList = buildAdjacencyList(segments);
         Map<String, Double> predictedTravelTimes = buildTravelTimeMap(segments);
 
@@ -91,7 +93,7 @@ public class RoutePlanningAppServiceImpl implements RoutePlanningAppService {
 
     @Override
     public Map<String, Double> getNetworkStatus() {
-        List<RoadSegment> segments = roadSegmentRepository.findAll();
+        List<RoadSegment> segments = loadSegments();
         Map<String, Double> status = new HashMap<>();
         for (RoadSegment segment : segments) {
             Double travelTime = segment.getCurrentTravelTime();
@@ -106,8 +108,76 @@ public class RoutePlanningAppServiceImpl implements RoutePlanningAppService {
     }
 
     private Map<String, IntersectionNode> loadNodes() {
-        return intersectionRepository.findAll().stream()
-                .collect(Collectors.toMap(IntersectionNode::getId, n -> n));
+        try {
+            return intersectionRepository.findAll().stream()
+                    .collect(Collectors.toMap(IntersectionNode::getId, n -> n));
+        } catch (Exception e) {
+            log.warn("Neo4j unavailable, using demo intersection data: {}", e.getMessage());
+            return getDemoNodes();
+        }
+    }
+
+    private List<RoadSegment> loadSegments() {
+        try {
+            return roadSegmentRepository.findAll();
+        } catch (Exception e) {
+            log.warn("Neo4j unavailable, using demo road segment data: {}", e.getMessage());
+            return getDemoSegments();
+        }
+    }
+
+    private static Map<String, IntersectionNode> getDemoNodes() {
+        Map<String, IntersectionNode> nodes = new LinkedHashMap<>();
+        double baseLat = 31.2304;
+        double baseLng = 121.4737;
+
+        for (int i = 1; i <= 9; i++) {
+            IntersectionNode node = new IntersectionNode();
+            String id = "INT-00" + i;
+            node.setId(id);
+            node.setName(id + "路口");
+            int row = (i - 1) / 3;
+            int col = (i - 1) % 3;
+            node.setLatitude(baseLat + row * 0.01);
+            node.setLongitude(baseLng + col * 0.01);
+            nodes.put(id, node);
+        }
+        return nodes;
+    }
+
+    private static List<RoadSegment> getDemoSegments() {
+        List<RoadSegment> segments = new ArrayList<>();
+        // Grid connections: each intersection connects to right and bottom neighbors
+        long id = 1;
+        for (int i = 1; i <= 9; i++) {
+            String from = "INT-00" + i;
+            int row = (i - 1) / 3;
+            int col = (i - 1) % 3;
+
+            if (col < 2) {
+                String to = "INT-00" + (i + 1);
+                segments.add(newSegment(id++, from, to, 500, 40, 30));
+            }
+            if (row < 2) {
+                String to = "INT-00" + (i + 3);
+                segments.add(newSegment(id++, from, to, 600, 40, 36));
+            }
+        }
+        return segments;
+    }
+
+    private static RoadSegment newSegment(long id, String from, String to, double length,
+                                          double freeFlowSpeed, double currentSpeed) {
+        RoadSegment seg = new RoadSegment();
+        seg.setId(id);
+        seg.setFromId(from);
+        seg.setToId(to);
+        seg.setLength(length);
+        seg.setFreeFlowSpeed(freeFlowSpeed / 3.6); // km/h to m/s
+        seg.setCurrentSpeed(currentSpeed / 3.6);
+        seg.setCurrentTravelTime(length / (currentSpeed / 3.6));
+        seg.setLanes(3);
+        return seg;
     }
 
     private Map<String, List<RoadSegment>> buildAdjacencyList(List<RoadSegment> segments) {

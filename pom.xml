@@ -39,6 +39,7 @@
         <!-- 统一版本管理 -->
         <spring-cloud.version>2023.0.1</spring-cloud.version>
         <flink.version>1.18.0</flink.version>
+        <flink-connector-kafka.version>1.16.0</flink-connector-kafka.version>
         <dl4j.version>1.0.0-M2.1</dl4j.version>
         <kafka.version>3.6.0</kafka.version>
         <neo4j.version>5.15.0</neo4j.version>
@@ -94,6 +95,11 @@
             <dependency>
                 <groupId>org.apache.flink</groupId>
                 <artifactId>flink-connector-kafka</artifactId>
+                <version>${flink-connector-kafka.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.flink</groupId>
+                <artifactId>flink-connector-base</artifactId>
                 <version>${flink.version}</version>
             </dependency>
 
