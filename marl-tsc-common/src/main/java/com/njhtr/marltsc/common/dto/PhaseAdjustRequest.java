@@ -1,10 +1,7 @@
-package com.njhtr.marltsc.signal.api.dto.request;
+package com.njhtr.marltsc.common.dto;
 
 import lombok.Data;
 
-/**
- * Phase adjust request DTO — carries traffic state for DRL-driven optimization.
- */
 @Data
 public class PhaseAdjustRequest {
 

@@ -2,15 +2,17 @@ package com.njhtr.marltsc.signal.service.impl;
 
 import com.njhtr.marltsc.common.exception.BusinessException;
 import com.njhtr.marltsc.common.exception.ErrorCode;
-import com.njhtr.marltsc.signal.api.dto.request.PhaseAdjustRequest;
-import com.njhtr.marltsc.signal.api.dto.response.PhaseResponse;
-import com.njhtr.marltsc.signal.api.dto.response.SignalPlanResponse;
+import com.njhtr.marltsc.common.dto.PhaseAdjustRequest;
+import com.njhtr.marltsc.common.dto.PhaseResponse;
+import com.njhtr.marltsc.common.dto.SignalPlanResponse;
+import com.njhtr.marltsc.signal.domain.entity.SignalPhase;
 import com.njhtr.marltsc.signal.domain.entity.SignalPlan;
 import com.njhtr.marltsc.signal.domain.service.PhaseOptimizationDomainService;
-import com.njhtr.marltsc.signal.domain.service.RewardCalculator;
-import com.njhtr.marltsc.signal.domain.service.StateVectorBuilder;
+import com.njhtr.marltsc.common.domain.RewardCalculator;
+import com.njhtr.marltsc.common.domain.StateVectorBuilder;
 import com.njhtr.marltsc.signal.infrastructure.client.DrlEngineClient;
 import com.njhtr.marltsc.signal.infrastructure.client.dto.DrlActionResponse;
+import com.njhtr.marltsc.signal.infrastructure.mapper.SignalPhaseMapper;
 import com.njhtr.marltsc.signal.infrastructure.mapper.SignalPlanMapper;
 import com.njhtr.marltsc.signal.service.api.SignalControlAppService;
 import lombok.RequiredArgsConstructor;
@@ -32,6 +34,7 @@ public class SignalControlAppServiceImpl implements SignalControlAppService {
     private static final int GREEN_TIME_STEP = 5;
 
     private final SignalPlanMapper planMapper;
+    private final SignalPhaseMapper phaseMapper;
     private final PhaseOptimizationDomainService domainService;
     private final StateVectorBuilder stateVectorBuilder;
     private final RewardCalculator rewardCalculator;
@@ -148,7 +151,21 @@ public class SignalControlAppServiceImpl implements SignalControlAppService {
         response.setIntersectionId(plan.getIntersectionId());
         response.setPlanName(plan.getPlanName());
         response.setCycleTime(plan.getCycleTime());
-        response.setPhases(Collections.emptyList());
+        response.setPhases(loadPhases(plan.getPlanId()));
         return response;
+    }
+
+    private List<PhaseResponse> loadPhases(String planId) {
+        List<SignalPhase> phases = phaseMapper.selectByPlanId(planId);
+        if (phases == null || phases.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return phases.stream().map(p -> {
+            PhaseResponse r = new PhaseResponse();
+            r.setPhaseId(p.getPhaseId());
+            r.setDirection(p.getDirection());
+            r.setGreenTime(p.getGreenTime());
+            return r;
+        }).toList();
     }
 }

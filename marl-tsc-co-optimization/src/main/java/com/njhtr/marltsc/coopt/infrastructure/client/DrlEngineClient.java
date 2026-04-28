@@ -1,9 +1,9 @@
 package com.njhtr.marltsc.coopt.infrastructure.client;
 
 import com.njhtr.marltsc.common.result.ApiResult;
-import com.njhtr.marltsc.coopt.infrastructure.client.dto.DrlActionResponse;
-import com.njhtr.marltsc.coopt.infrastructure.client.dto.DrlInferenceRequest;
-import com.njhtr.marltsc.coopt.infrastructure.client.dto.DrlTrainRequest;
+import com.njhtr.marltsc.common.dto.DrlActionResponse;
+import com.njhtr.marltsc.common.dto.DrlInferenceRequest;
+import com.njhtr.marltsc.common.dto.DrlTrainRequest;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;

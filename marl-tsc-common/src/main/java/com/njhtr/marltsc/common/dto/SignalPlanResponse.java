@@ -1,15 +1,10 @@
-package com.njhtr.marltsc.signal.api.dto.response;
+package com.njhtr.marltsc.common.dto;
 
 import lombok.Data;
-
 import java.util.List;
 
-/**
- * Signal plan response DTO.
- */
 @Data
 public class SignalPlanResponse {
-
     private String planId;
     private String intersectionId;
     private String planName;

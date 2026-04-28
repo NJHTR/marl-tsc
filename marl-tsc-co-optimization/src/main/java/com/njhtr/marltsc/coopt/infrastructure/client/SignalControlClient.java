@@ -1,8 +1,8 @@
 package com.njhtr.marltsc.coopt.infrastructure.client;
 
 import com.njhtr.marltsc.common.result.ApiResult;
-import com.njhtr.marltsc.coopt.infrastructure.client.dto.PhaseAdjustRequest;
-import com.njhtr.marltsc.coopt.infrastructure.client.dto.SignalPlanResponse;
+import com.njhtr.marltsc.common.dto.PhaseAdjustRequest;
+import com.njhtr.marltsc.common.dto.SignalPlanResponse;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;

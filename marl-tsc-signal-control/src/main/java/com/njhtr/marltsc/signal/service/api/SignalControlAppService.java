@@ -1,7 +1,7 @@
 package com.njhtr.marltsc.signal.service.api;
 
-import com.njhtr.marltsc.signal.api.dto.request.PhaseAdjustRequest;
-import com.njhtr.marltsc.signal.api.dto.response.SignalPlanResponse;
+import com.njhtr.marltsc.common.dto.PhaseAdjustRequest;
+import com.njhtr.marltsc.common.dto.SignalPlanResponse;
 
 /**
  * Signal control application service interface.

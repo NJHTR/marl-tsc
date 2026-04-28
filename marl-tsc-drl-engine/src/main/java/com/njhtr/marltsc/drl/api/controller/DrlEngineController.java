@@ -8,8 +8,12 @@ import com.njhtr.marltsc.drl.api.dto.response.AgentStatusResponse;
 import com.njhtr.marltsc.drl.api.dto.response.TrainingStatusResponse;
 import com.njhtr.marltsc.drl.domain.service.InferenceService;
 import com.njhtr.marltsc.drl.domain.service.TrainingService;
+import com.njhtr.marltsc.drl.infrastructure.kafka.TrafficStateHolder;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/v1/drl")
@@ -18,6 +22,7 @@ public class DrlEngineController {
 
     private final InferenceService inferenceService;
     private final TrainingService trainingService;
+    private final TrafficStateHolder trafficStateHolder;
 
     @PostMapping("/decide")
     public ApiResult<ActionResponse> decide(@RequestBody InferenceRequest request) {
@@ -58,5 +63,20 @@ public class DrlEngineController {
     public ApiResult<Void> resetAgent(@PathVariable String intersectionId) {
         trainingService.resetAgent(intersectionId);
         return ApiResult.ok();
+    }
+
+    @GetMapping("/traffic-state/{intersectionId}")
+    public ApiResult<TrafficStateHolder.TrafficFeatureSnapshot> getTrafficState(
+            @PathVariable String intersectionId) {
+        TrafficStateHolder.TrafficFeatureSnapshot state = trafficStateHolder.get(intersectionId);
+        if (state == null) {
+            return ApiResult.fail(404, "No traffic state for: " + intersectionId);
+        }
+        return ApiResult.ok(state);
+    }
+
+    @GetMapping("/traffic-states")
+    public ApiResult<Map<String, TrafficStateHolder.TrafficFeatureSnapshot>> getAllTrafficStates() {
+        return ApiResult.ok(trafficStateHolder.getAll());
     }
 }

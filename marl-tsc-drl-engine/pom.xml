@@ -43,6 +43,12 @@
             <artifactId>nd4j-native-platform</artifactId>
         </dependency>
 
+        <!-- Spring Kafka for consuming traffic features/alerts -->
+        <dependency>
+            <groupId>org.springframework.kafka</groupId>
+            <artifactId>spring-kafka</artifactId>
+        </dependency>
+
         <!-- Redis for model/state persistence -->
         <dependency>
             <groupId>redis.clients</groupId>

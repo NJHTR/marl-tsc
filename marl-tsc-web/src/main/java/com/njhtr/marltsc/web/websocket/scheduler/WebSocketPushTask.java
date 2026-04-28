@@ -3,7 +3,7 @@ package com.njhtr.marltsc.web.websocket.scheduler;
 import com.njhtr.marltsc.common.result.ApiResult;
 import com.njhtr.marltsc.web.infrastructure.client.DataFusionClient;
 import com.njhtr.marltsc.web.infrastructure.client.SignalControlClient;
-import com.njhtr.marltsc.web.infrastructure.client.dto.SignalPlanResponse;
+import com.njhtr.marltsc.common.dto.SignalPlanResponse;
 import com.njhtr.marltsc.web.infrastructure.client.dto.TrafficFeatureResponse;
 import com.njhtr.marltsc.web.websocket.AlertMessage;
 import com.njhtr.marltsc.web.websocket.SignalUpdateMessage;

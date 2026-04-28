@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.njhtr.marltsc.signal.infrastructure.mapper.SignalPhaseMapper">
+
+    <resultMap id="PhaseResultMap" type="com.njhtr.marltsc.signal.domain.entity.SignalPhase">
+        <id column="phase_id" property="phaseId"/>
+        <result column="plan_id" property="planId"/>
+        <result column="direction" property="direction"/>
+        <result column="green_time" property="greenTime"/>
+        <result column="yellow_time" property="yellowTime"/>
+        <result column="red_time" property="redTime"/>
+        <result column="sequence" property="sequence"/>
+    </resultMap>
+
+    <select id="selectByPlanId" resultMap="PhaseResultMap">
+        SELECT phase_id, plan_id, direction, green_time, yellow_time, red_time, sequence
+        FROM signal_phase
+        WHERE plan_id = #{planId}
+        ORDER BY sequence
+    </select>
+
+</mapper>

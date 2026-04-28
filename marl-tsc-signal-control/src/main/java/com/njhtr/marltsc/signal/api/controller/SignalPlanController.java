@@ -1,8 +1,8 @@
 package com.njhtr.marltsc.signal.api.controller;
 
 import com.njhtr.marltsc.common.result.ApiResult;
-import com.njhtr.marltsc.signal.api.dto.request.PhaseAdjustRequest;
-import com.njhtr.marltsc.signal.api.dto.response.SignalPlanResponse;
+import com.njhtr.marltsc.common.dto.PhaseAdjustRequest;
+import com.njhtr.marltsc.common.dto.SignalPlanResponse;
 import com.njhtr.marltsc.signal.service.api.SignalControlAppService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.util.Assert;

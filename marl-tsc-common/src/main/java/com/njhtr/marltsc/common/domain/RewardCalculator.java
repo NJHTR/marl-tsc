@@ -1,4 +1,4 @@
-package com.njhtr.marltsc.coopt.domain.service;
+package com.njhtr.marltsc.common.domain;
 
 import org.springframework.stereotype.Component;
 
@@ -17,6 +17,15 @@ public class RewardCalculator {
         double delayPenalty = -0.15 * Math.min(1.0, delay / 100.0);
 
         return clamp(throughputReward + speedReward + occupancyPenalty + queuePenalty + delayPenalty, -1, 1);
+    }
+
+    public double computeDelta(double prevOccupancy, double prevQueue, double prevDelay,
+                               double currOccupancy, double currQueue, double currDelay) {
+        double occImprove = prevOccupancy - currOccupancy;
+        double queueImprove = (prevQueue - currQueue) / 200.0;
+        double delayImprove = (prevDelay - currDelay) / 100.0;
+
+        return clamp(0.4 * occImprove + 0.3 * queueImprove + 0.3 * delayImprove, -1, 1);
     }
 
     private static double clamp(double v, double min, double max) {

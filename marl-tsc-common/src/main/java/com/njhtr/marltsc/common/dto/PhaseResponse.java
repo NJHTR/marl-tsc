@@ -1,10 +1,10 @@
-package com.njhtr.marltsc.coopt.infrastructure.client.dto;
+package com.njhtr.marltsc.common.dto;
 
 import lombok.Data;
 
 @Data
 public class PhaseResponse {
-    private String phaseId;
+    private Integer phaseId;
     private String direction;
     private Integer greenTime;
 }

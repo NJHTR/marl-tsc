@@ -1,4 +1,4 @@
-package com.njhtr.marltsc.coopt.infrastructure.client.dto;
+package com.njhtr.marltsc.common.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

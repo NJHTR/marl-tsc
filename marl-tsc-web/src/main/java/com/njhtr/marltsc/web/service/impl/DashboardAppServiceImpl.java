@@ -1,5 +1,7 @@
 package com.njhtr.marltsc.web.service.impl;
 
+import com.njhtr.marltsc.common.dto.IntersectionInfoResponse;
+import com.njhtr.marltsc.common.dto.SignalPlanResponse;
 import com.njhtr.marltsc.common.result.ApiResult;
 import com.njhtr.marltsc.web.api.dto.response.*;
 import com.njhtr.marltsc.web.infrastructure.client.*;
@@ -9,11 +11,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 @Slf4j
 @Service
@@ -32,31 +30,27 @@ public class DashboardAppServiceImpl implements DashboardAppService {
         response.setIntersectionId(intersectionId);
         response.setLastUpdateTime(System.currentTimeMillis());
 
-        // 1. Fetch signal plan
         fetchSignalPlan(intersectionId).ifPresent(response::setSignalPlan);
-
-        // 2. Fetch traffic features
         fetchTrafficFeature(intersectionId).ifPresent(response::setTrafficFeature);
-
-        // 3. Fetch optimization status
         fetchOptimizationStatus(intersectionId).ifPresent(response::setOptimizationStatus);
-
-        // 4. Fetch active routes (placeholder)
-        response.setActiveRoutes(new ArrayList<>());
+        response.setActiveRoutes(fetchActiveRoutes(intersectionId));
 
         return response;
     }
 
     @Override
     public List<IntersectionSummaryResponse> listIntersections() {
-        List<IntersectionSummaryResponse> list = new ArrayList<>();
-
-        addIntersection(list, "INT-001", "中央大道与解放路交叉口", "正常", "低");
-        addIntersection(list, "INT-002", "人民路与建设路交叉口", "繁忙", "中");
-        addIntersection(list, "INT-003", "长江路与黄河路交叉口", "拥堵", "高");
-        addIntersection(list, "INT-004", "南京路与中山路交叉口", "正常", "低");
-
-        return list;
+        try {
+            ApiResult<List<IntersectionInfoResponse>> result = dataFusionClient.listIntersections();
+            if (result != null && result.getData() != null) {
+                return result.getData().stream()
+                        .map(this::toSummary)
+                        .toList();
+            }
+        } catch (Exception e) {
+            log.warn("Failed to fetch intersections from data-fusion: {}", e.getMessage());
+        }
+        return Collections.emptyList();
     }
 
     @Override
@@ -84,6 +78,41 @@ public class DashboardAppServiceImpl implements DashboardAppService {
             resp.setMessage("优化服务不可用: " + e.getMessage());
         }
         return resp;
+    }
+
+    private IntersectionSummaryResponse toSummary(IntersectionInfoResponse info) {
+        IntersectionSummaryResponse r = new IntersectionSummaryResponse();
+        r.setIntersectionId(info.getIntersectionId());
+        r.setName(info.getName());
+        r.setStatus("正常");
+        r.setCongestionLevel("未知");
+        r.setLastUpdateTime(System.currentTimeMillis());
+        return r;
+    }
+
+    private List<RouteSummary> fetchActiveRoutes(String intersectionId) {
+        try {
+            ApiResult<Map<String, Object>> result = routePlanningClient.getNetworkStatus();
+            if (result == null || result.getData() == null) return Collections.emptyList();
+
+            List<RouteSummary> routes = new ArrayList<>();
+            result.getData().forEach((segId, segData) -> {
+                RouteSummary rs = new RouteSummary();
+                rs.setRouteId(segId);
+                rs.setStatus("active");
+                @SuppressWarnings("unchecked")
+                Map<String, Object> data = (Map<String, Object>) segData;
+                Object travelTime = data.get("travelTime");
+                if (travelTime instanceof Number) {
+                    rs.setEstimatedTime(((Number) travelTime).doubleValue());
+                }
+                routes.add(rs);
+            });
+            return routes;
+        } catch (Exception e) {
+            log.warn("Failed to fetch route network status: {}", e.getMessage());
+            return Collections.emptyList();
+        }
     }
 
     private Optional<SignalPlanSummary> fetchSignalPlan(String intersectionId) {
@@ -145,16 +174,5 @@ public class DashboardAppServiceImpl implements DashboardAppService {
             log.warn("Failed to fetch optimization status for {}: {}", intersectionId, e.getMessage());
             return Optional.empty();
         }
-    }
-
-    private void addIntersection(List<IntersectionSummaryResponse> list, String id, String name,
-                                  String status, String congestionLevel) {
-        IntersectionSummaryResponse r = new IntersectionSummaryResponse();
-        r.setIntersectionId(id);
-        r.setName(name);
-        r.setStatus(status);
-        r.setCongestionLevel(congestionLevel);
-        r.setLastUpdateTime(System.currentTimeMillis());
-        list.add(r);
     }
 }

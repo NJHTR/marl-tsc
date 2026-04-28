@@ -4,6 +4,16 @@ server:
 spring:
   application:
     name: drl-engine-service
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: drl-engine-consumer
+      auto-offset-reset: latest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    topics:
+      traffic-features: traffic-features
+      traffic-alerts: traffic-alerts
 
 # DRL Engine hyperparameters
 drl:

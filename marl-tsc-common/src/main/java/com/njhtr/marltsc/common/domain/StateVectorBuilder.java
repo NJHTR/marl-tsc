@@ -1,4 +1,4 @@
-package com.njhtr.marltsc.coopt.domain.service;
+package com.njhtr.marltsc.common.domain;
 
 import org.springframework.stereotype.Component;
 

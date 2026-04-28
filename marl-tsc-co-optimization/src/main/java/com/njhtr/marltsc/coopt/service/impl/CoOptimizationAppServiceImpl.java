@@ -8,13 +8,13 @@ import com.njhtr.marltsc.coopt.api.dto.response.OptimizationResultResponse;
 import com.njhtr.marltsc.coopt.api.dto.response.RouteAdjustmentResponse;
 import com.njhtr.marltsc.coopt.api.dto.response.SignalActionResponse;
 import com.njhtr.marltsc.coopt.domain.entity.OptimizationLog;
-import com.njhtr.marltsc.coopt.domain.service.RewardCalculator;
-import com.njhtr.marltsc.coopt.domain.service.StateVectorBuilder;
+import com.njhtr.marltsc.common.domain.RewardCalculator;
+import com.njhtr.marltsc.common.domain.StateVectorBuilder;
+import com.njhtr.marltsc.common.dto.*;
 import com.njhtr.marltsc.coopt.event.publisher.OptimizationEventPublisher;
 import com.njhtr.marltsc.coopt.infrastructure.client.DataFusionClient;
 import com.njhtr.marltsc.coopt.infrastructure.client.DrlEngineClient;
 import com.njhtr.marltsc.coopt.infrastructure.client.SignalControlClient;
-import com.njhtr.marltsc.coopt.infrastructure.client.dto.*;
 import com.njhtr.marltsc.coopt.infrastructure.mapper.OptimizationLogMapper;
 import com.njhtr.marltsc.coopt.service.api.CoOptimizationAppService;
 import lombok.RequiredArgsConstructor;
@@ -127,6 +127,11 @@ public class CoOptimizationAppServiceImpl implements CoOptimizationAppService {
             adjustReq.setIntersectionId(intersectionId);
             adjustReq.setPhaseId(1);
             adjustReq.setSuggestedGreenTime(greenTime);
+            adjustReq.setFlow(snap.getFlow());
+            adjustReq.setSpeed(snap.getSpeed());
+            adjustReq.setOccupancy(snap.getOccupancy());
+            adjustReq.setQueueLength(snap.getQueueLength());
+            adjustReq.setDelay(snap.getDelay());
             signalControlClient.adjustPhase(adjustReq);
         } catch (Exception e) {
             log.warn("Signal adjust failed for {}: {}", intersectionId, e.getMessage());
