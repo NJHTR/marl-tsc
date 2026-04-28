@@ -1,233 +1,234 @@
 <template>
   <div class="traffic-monitor">
     <!-- Control bar -->
-    <el-card shadow="never" class="control-bar">
-      <el-row :gutter="12" align="middle">
-        <el-col :span="6">
-          <el-select v-model="selectedId" placeholder="选择路口" size="large" style="width:100%"
-            @change="loadData">
-            <el-option v-for="item in intersections" :key="item.intersectionId"
-              :label="item.name || item.intersectionId" :value="item.intersectionId" />
-          </el-select>
-        </el-col>
-        <el-col :span="4">
-          <el-button type="primary" size="large" @click="toggleSimulation" :icon="simRunning ? VideoPause : VideoPlay" style="width:100%">
-            {{ simRunning ? '暂停' : '运行' }}
-          </el-button>
-        </el-col>
-        <el-col :span="8">
-          <div class="status-bar">
-            <el-tag :type="simRunning ? 'success' : 'info'" effect="dark" size="default">
-              {{ simRunning ? '仿真运行中' : '已暂停' }}
-            </el-tag>
-            <el-tag type="warning" effect="plain" size="default">
-              车流量: {{ trafficFlow }}
-            </el-tag>
-            <el-tag :type="congestionTag" effect="plain" size="default">
-              {{ congestionText }}
-            </el-tag>
-          </div>
-        </el-col>
-        <el-col :span="6" style="text-align:right">
+    <div class="control-bar">
+      <div class="control-row">
+        <el-select v-model="selectedId" placeholder="选择路口" size="default" style="width:200px"
+          @change="onIntersectionChange">
+          <el-option v-for="item in intersections" :key="item.intersectionId"
+            :label="item.name || item.intersectionId" :value="item.intersectionId" />
+        </el-select>
+        <el-button type="primary" @click="toggleSimulation" size="default">
+          {{ simRunning ? '暂停' : '运行' }}
+        </el-button>
+        <div class="status-tags">
+          <el-tag :type="backendOnline ? 'success' : 'warning'" size="small" effect="plain">
+            {{ backendOnline ? 'API' : '本地' }}
+          </el-tag>
+          <el-tag :type="dataStatus.type" size="small" effect="plain">
+            {{ dataStatus.text }}
+          </el-tag>
+          <span class="status-time">{{ currentTime }}</span>
+        </div>
+        <div style="margin-left:auto">
           <el-button-group>
-            <el-button :type="viewMode === '3d' ? 'primary' : 'default'" @click="viewMode = '3d'" size="default">3D</el-button>
-            <el-button :type="viewMode === 'data' ? 'primary' : 'default'" @click="viewMode = 'data'" size="default">数据</el-button>
+            <el-button :type="viewMode === '3d' ? 'primary' : 'default'" size="small" @click="viewMode = '3d'">3D</el-button>
+            <el-button :type="viewMode === 'data' ? 'primary' : 'default'" size="small" @click="viewMode = 'data'">列表</el-button>
           </el-button-group>
-        </el-col>
-      </el-row>
-    </el-card>
+        </div>
+      </div>
+    </div>
 
     <!-- 3D View -->
-    <el-row :gutter="12" style="margin-top:12px">
-      <el-col :span="viewMode === '3d' ? 16 : 24">
-        <el-card shadow="never" class="scene-card" :style="{ height: viewMode === '3d' ? '520px' : 'auto' }">
+    <div class="content-row">
+      <div class="scene-area" :class="{ full: viewMode !== '3d' }" v-if="viewMode === '3d'">
+        <div class="scene-panel">
           <Intersection3D
             v-if="show3d"
+            :key="selectedId"
             :intersection-id="selectedId"
             :phases="phases"
             :current-phase-id="currentPhaseId"
             :flow="trafficFlow"
             :speed="trafficSpeed"
             :occupancy="trafficOccupancy"
+            :approaches="currentApproaches"
             @adjust-phase="onAdjustPhase"
           />
-          <div v-else style="height:500px;display:flex;align-items:center;justify-content:center;color:#909399">
-            选择路口查看3D场景
+          <div v-else class="scene-placeholder">
+            <span>选择路口查看3D场景</span>
           </div>
-        </el-card>
-      </el-col>
+        </div>
+      </div>
 
-      <!-- Side panel (3D mode) -->
-      <el-col :span="8" v-if="viewMode === '3d'">
-        <el-card shadow="never" class="info-card">
-          <template #header>
-            <div style="display:flex;justify-content:space-between;align-items:center">
-              <span style="font-weight:600">{{ selectedId }} 实时数据</span>
-              <el-tag size="small" :type="online ? 'success' : 'danger'" effect="dark">
-                {{ online ? '在线' : '离线' }}
-              </el-tag>
+      <!-- Metrics panel -->
+      <div class="metrics-panel" v-if="viewMode === '3d'">
+        <div class="panel-block">
+          <div class="panel-block-title">{{ selectedLabel }}</div>
+          <div class="metrics-grid">
+            <div class="metric">
+              <span class="metric-value">{{ Math.round(trafficFlow) }}</span>
+              <span class="metric-label">车流量 (辆/时)</span>
             </div>
-          </template>
-
-          <div class="metric-grid">
-            <div class="metric-item">
-              <div class="metric-icon" style="background:#409eff20;color:#409eff">🚗</div>
-              <div class="metric-info">
-                <span class="metric-val">{{ Math.round(trafficFlow) }}</span>
-                <span class="metric-lbl">车流量(辆/时)</span>
-              </div>
+            <div class="metric">
+              <span class="metric-value">{{ trafficSpeed.toFixed(1) }}</span>
+              <span class="metric-label">速度 (km/h)</span>
             </div>
-            <div class="metric-item">
-              <div class="metric-icon" style="background:#67c23a20;color:#67c23a">⚡</div>
-              <div class="metric-info">
-                <span class="metric-val">{{ trafficSpeed.toFixed(1) }}</span>
-                <span class="metric-lbl">速度(km/h)</span>
-              </div>
+            <div class="metric">
+              <span class="metric-value">{{ (trafficOccupancy * 100).toFixed(0) }}%</span>
+              <span class="metric-label">占用率</span>
             </div>
-            <div class="metric-item">
-              <div class="metric-icon" :style="{ background: occColor + '20', color: occColor }">📊</div>
-              <div class="metric-info">
-                <span class="metric-val">{{ (trafficOccupancy * 100).toFixed(0) }}%</span>
-                <span class="metric-lbl">占用率</span>
-              </div>
-            </div>
-            <div class="metric-item">
-              <div class="metric-icon" style="background:#e6a23c20;color:#e6a23c">📏</div>
-              <div class="metric-info">
-                <span class="metric-val">{{ queueLength.toFixed(0) }}</span>
-                <span class="metric-lbl">排队长度(m)</span>
-              </div>
+            <div class="metric">
+              <span class="metric-value">{{ queueLength.toFixed(0) }}</span>
+              <span class="metric-label">排队长度 (m)</span>
             </div>
           </div>
+        </div>
 
-          <el-divider style="margin:12px 0" />
-
-          <div style="font-weight:600;margin-bottom:8px;font-size:13px">信号相位</div>
-          <div v-for="ph in phases" :key="ph.phaseId" class="phase-row"
+        <div class="panel-block">
+          <div class="panel-block-title">信号相位</div>
+          <div v-for="ph in phases" :key="ph.phaseId" class="phase-item"
             :class="{ active: String(ph.phaseId) === String(currentPhaseId) }"
             @click="switchPhase(ph.phaseId)">
-            <div class="phase-dir">{{ ph.direction }}</div>
-            <div class="phase-lights">
-              <span class="phase-light red" :class="{ on: ph.phaseId === currentPhaseId && ph.greenTime > 0 }"></span>
-              <span class="phase-light yellow" :class="{ on: false }"></span>
-              <span class="phase-light green" :class="{ on: String(ph.phaseId) === String(currentPhaseId) }" :style="{ width: (ph.greenTime / 90 * 60) + 'px' }"></span>
-              <span class="phase-time">{{ ph.greenTime }}s</span>
+            <div class="phase-direction">{{ ph.direction }}</div>
+            <div class="phase-times">
+              <span class="phase-seg green" :class="{ on: String(ph.phaseId) === String(currentPhaseId) }" :style="{ width: greenPct(ph) + '%' }">{{ ph.greenTime }}s</span>
+              <span class="phase-seg yellow" :style="{ width: yellowPct(ph) + '%' }">{{ ph.yellowTime }}s</span>
+              <span class="phase-seg red" :class="{ on: String(ph.phaseId) !== String(currentPhaseId) }" :style="{ width: redPct(ph) + '%' }">{{ ph.redTime }}s</span>
             </div>
             <el-button text type="primary" size="small" @click.stop="showPhaseDialog(ph)">调整</el-button>
           </div>
-        </el-card>
-      </el-col>
-    </el-row>
+        </div>
 
-    <!-- Data view (detailed tables) -->
-    <el-row :gutter="12" style="margin-top:12px" v-if="viewMode === 'data'">
-      <el-col :span="24">
-        <el-card shadow="never">
-          <template #header><span style="font-weight:600">路口状态列表</span></template>
-          <el-table :data="allStatus" border stripe size="small" v-if="allStatus.length">
-            <el-table-column prop="intersectionId" label="路口" width="120" />
-            <el-table-column label="状态" width="100">
+        <div class="panel-block">
+          <div class="info-line"><span>延误</span><span>{{ delay.toFixed(1) }}s</span></div>
+          <div class="info-line"><span>通行能力</span><span>{{ currentCapacity || '-' }}</span></div>
+          <div class="info-line"><span>位置</span><span>{{ currentGps || '-' }}</span></div>
+        </div>
+      </div>
+
+      <!-- Full-width data table -->
+      <div class="scene-area full" v-if="viewMode === 'data'">
+        <div class="table-panel">
+          <div class="table-toolbar">
+            <span class="table-title">路口状态 ({{ allStatus.length }})</span>
+            <el-button size="small" @click="refreshAllData" :loading="loading">刷新</el-button>
+          </div>
+          <el-table :data="allStatus" border size="small" v-if="allStatus.length" max-height="480" style="width:100%">
+            <el-table-column prop="intersectionId" label="路口" width="90" />
+            <el-table-column label="状态" width="80">
               <template #default="{ row }">
-                <el-tag :type="row.status === '拥堵' ? 'danger' : row.status === '缓行' ? 'warning' : 'success'" size="small">
-                  {{ row.status }}
-                </el-tag>
+                <span :style="{ color: occColorFromVal(row.occupancy) }">{{ row.congestionLevel }}</span>
               </template>
             </el-table-column>
-            <el-table-column prop="flow" label="车流量" width="100" />
-            <el-table-column prop="speed" label="速度" width="80" />
+            <el-table-column prop="flow" label="车流量" width="90">
+              <template #default="{ row }">{{ Math.round(row.flow) }}</template>
+            </el-table-column>
+            <el-table-column prop="speed" label="速度" width="80">
+              <template #default="{ row }">{{ row.speed.toFixed(1) }}</template>
+            </el-table-column>
             <el-table-column label="占用率" width="120">
               <template #default="{ row }">
-                <el-progress :percentage="Math.round((row.occupancy || 0) * 100)" :color="occColor" :stroke-width="10" />
+                <el-progress :percentage="Math.round((row.occupancy || 0) * 100)" :color="occColorFromVal(row.occupancy)" :stroke-width="8" />
               </template>
             </el-table-column>
-            <el-table-column prop="queueLength" label="排队长度" width="90" />
-            <el-table-column prop="delay" label="延误" width="70" />
-            <el-table-column prop="lastUpdate" label="更新时间" />
+            <el-table-column prop="queueLength" label="排队" width="70">
+              <template #default="{ row }">{{ row.queueLength.toFixed(0) }}m</template>
+            </el-table-column>
+            <el-table-column prop="delay" label="延误" width="60">
+              <template #default="{ row }">{{ row.delay.toFixed(1) }}s</template>
+            </el-table-column>
+            <el-table-column label="时间" width="150">
+              <template #default="{ row }">{{ formatTime(row.timestamp) }}</template>
+            </el-table-column>
+            <el-table-column label="操作" width="60" fixed="right">
+              <template #default="{ row }">
+                <el-button link type="primary" size="small" @click="selectedId = row.intersectionId; viewMode='3d'">查看</el-button>
+              </template>
+            </el-table-column>
           </el-table>
-          <el-empty v-else description="暂无数据" />
-        </el-card>
-      </el-col>
-    </el-row>
+          <el-empty v-else description="正在加载数据..." />
+        </div>
+      </div>
+    </div>
 
-    <!-- Adjust dialog -->
-    <el-dialog v-model="dialogVisible" title="调整绿灯时间" width="400px">
-      <el-form :model="adjustForm" label-width="100px">
+    <!-- Phase adjust dialog -->
+    <el-dialog v-model="dialogVisible" title="调整绿灯时间" width="380px">
+      <el-form :model="adjustForm" label-width="80px">
         <el-form-item label="方向">{{ adjustForm.direction }}</el-form-item>
         <el-form-item label="绿灯时间">
           <el-slider v-model="adjustForm.greenTime" :min="10" :max="120" :step="5" show-input />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="confirmAdjust">应用</el-button>
+        <el-button size="small" @click="dialogVisible = false">取消</el-button>
+        <el-button size="small" type="primary" @click="confirmAdjust">应用</el-button>
       </template>
     </el-dialog>
 
-    <!-- Alert panel -->
-    <el-card v-if="alerts.length" shadow="never" class="alert-panel">
-      <template #header>
-        <span style="font-weight:600;color:#f56c6c">🚨 实时告警</span>
-        <el-button size="small" text @click="alerts = []">清空</el-button>
-      </template>
-      <div class="alert-scroll">
-        <div v-for="(a, i) in alerts" :key="i" class="alert-row" :class="a.severity">
-          <el-tag :type="a.severity === 'high' ? 'danger' : 'warning'" size="small">{{ a.alertType }}</el-tag>
-          <span class="alert-msg">{{ a.message }}</span>
+    <!-- Alerts -->
+    <div v-if="alerts.length" class="alert-bar">
+      <span class="alert-title">告警 ({{ alerts.length }})</span>
+      <el-button size="small" text @click="alerts = []">清空</el-button>
+      <div class="alert-list">
+        <div v-for="(a, i) in alerts" :key="i" class="alert-item" :class="a.severity">
+          <el-tag :type="a.severity === 'high' ? 'danger' : 'warning'" size="small">{{ a.type }}</el-tag>
+          <span class="alert-message">{{ a.message }}</span>
           <span class="alert-time">{{ a.time }}</span>
         </div>
       </div>
-    </el-card>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
-import { VideoPlay, VideoPause } from '@element-plus/icons-vue'
-import { webApi, signalApi } from '@/api'
+import { fusionApi, signalApi } from '@/api'
 import { ElMessage } from 'element-plus'
 import Intersection3D from '@/components/Intersection3D.vue'
 
 const selectedId = ref('INT-001')
 const intersections = ref([])
+const intersectionMeta = ref({})
 const viewMode = ref('3d')
 const simRunning = ref(true)
-const online = ref(false)
+const backendOnline = ref(false)
 const show3d = ref(false)
+const loading = ref(false)
 
-// Demo data
 const phases = ref([
   { phaseId: 1, direction: '东西', greenTime: 35, yellowTime: 3, redTime: 52 },
   { phaseId: 2, direction: '南北', greenTime: 40, yellowTime: 3, redTime: 47 }
 ])
 const currentPhaseId = ref(1)
-const trafficFlow = ref(520)
-const trafficSpeed = ref(38)
-const trafficOccupancy = ref(0.45)
-const queueLength = ref(28)
+const trafficFlow = ref(0)
+const trafficSpeed = ref(0)
+const trafficOccupancy = ref(0)
+const queueLength = ref(0)
+const delay = ref(0)
+const congestionLevel = ref('')
 const allStatus = ref([])
 const alerts = ref([])
 
-let simTimer = null
-let alertTimer = null
+let pollTimer = null
+const currentTime = ref(new Date().toLocaleTimeString())
 
-const congestionTag = computed(() => {
-  if (trafficOccupancy.value > 0.8) return 'danger'
-  if (trafficOccupancy.value > 0.5) return 'warning'
-  return 'success'
+const selectedLabel = computed(() => intersectionMeta.value[selectedId.value]?.name || selectedId.value)
+const currentApproaches = computed(() => intersectionMeta.value[selectedId.value]?.approaches || null)
+const currentCapacity = computed(() => intersectionMeta.value[selectedId.value]?.capacity || null)
+const currentGps = computed(() => {
+  const m = intersectionMeta.value[selectedId.value]
+  return m ? `${m.latitude.toFixed(4)}, ${m.longitude.toFixed(4)}` : null
 })
-const congestionText = computed(() => {
-  if (trafficOccupancy.value > 0.8) return '严重拥堵'
-  if (trafficOccupancy.value > 0.6) return '拥堵'
-  if (trafficOccupancy.value > 0.4) return '缓行'
-  return '畅通'
+
+const dataStatus = computed(() => {
+  const occ = trafficOccupancy.value
+  if (occ > 0.8) return { type: 'danger', text: '严重拥堵' }
+  if (occ > 0.6) return { type: 'warning', text: '拥堵' }
+  if (occ > 0.4) return { type: 'warning', text: '缓行' }
+  return { type: 'success', text: '畅通' }
 })
-const occColor = computed(() => {
-  if (trafficOccupancy.value > 0.8) return '#f56c6c'
-  if (trafficOccupancy.value > 0.5) return '#e6a23c'
+
+function greenPct(p) { const t = p.greenTime + p.yellowTime + p.redTime; return t > 0 ? (p.greenTime / t) * 100 : 33 }
+function yellowPct(p) { const t = p.greenTime + p.yellowTime + p.redTime; return t > 0 ? (p.yellowTime / t) * 100 : 33 }
+function redPct(p) { const t = p.greenTime + p.yellowTime + p.redTime; return t > 0 ? (p.redTime / t) * 100 : 33 }
+function occColorFromVal(occ) {
+  if (occ > 0.8) return '#f56c6c'
+  if (occ > 0.5) return '#e6a23c'
   return '#67c23a'
-})
+}
+function formatTime(ts) { return ts ? new Date(ts).toLocaleTimeString() : '-' }
 
-// Phase adjust dialog
 const dialogVisible = ref(false)
 const adjustForm = ref({ phaseId: null, direction: '', greenTime: 30 })
 
@@ -236,145 +237,180 @@ function showPhaseDialog(ph) {
   dialogVisible.value = true
 }
 
-function confirmAdjust() {
+async function confirmAdjust() {
   const ph = phases.value.find(p => p.phaseId === adjustForm.value.phaseId)
   if (ph) {
     ph.greenTime = adjustForm.value.greenTime
-    // Recalc cycle
-    const totalYellow = phases.value.reduce((s, p) => s + p.yellowTime, 0)
-    const totalRed = phases.value.reduce((s, p) => s + p.redTime, 0)
-    const totalGreen = phases.value.reduce((s, p) => s + p.greenTime, 0)
-    ElMessage.success(`相位 ${ph.direction} 绿灯时间已调整为 ${ph.greenTime}s，周期 ${totalGreen + totalYellow + totalRed}s`)
+    try {
+      await signalApi.adjustPhase({
+        planId: selectedId.value,
+        phaseId: ph.phaseId,
+        intersectionId: selectedId.value,
+        suggestedGreenTime: adjustForm.value.greenTime,
+        flow: trafficFlow.value,
+        speed: trafficSpeed.value,
+        occupancy: trafficOccupancy.value,
+        queueLength: queueLength.value,
+        delay: delay.value
+      })
+      ElMessage.success(`相位 ${ph.direction} 绿灯已调整为 ${ph.greenTime}s，已提交DRL优化`)
+    } catch (e) {
+      ElMessage.warning(`本地已更新，但DRL引擎未响应: ${e.message}`)
+    }
   }
   dialogVisible.value = false
 }
 
-function switchPhase(phaseId) {
-  currentPhaseId.value = phaseId
-}
+function switchPhase(phaseId) { currentPhaseId.value = phaseId }
 
 function onAdjustPhase({ direction, type }) {
   const dirMap = { north: '南北', south: '南北', east: '东西', west: '东西' }
-  const dir = dirMap[direction]
-  const ph = phases.value.find(p => p.direction === dir)
-  if (ph) {
-    showPhaseDialog(ph)
-  }
+  const ph = phases.value.find(p => p.direction === dirMap[direction])
+  if (ph) showPhaseDialog(ph)
 }
 
-function toggleSimulation() {
-  simRunning.value = !simRunning.value
-}
+function toggleSimulation() { simRunning.value = !simRunning.value }
 
-function runSimulation() {
+async function fetchSimulationData() {
   if (!simRunning.value) return
-  // Vary traffic data randomly for visual effect
-  trafficFlow.value = Math.max(100, trafficFlow.value + (Math.random() - 0.5) * 60)
-  trafficSpeed.value = Math.max(5, Math.min(80, trafficSpeed.value + (Math.random() - 0.5) * 5))
-  trafficOccupancy.value = Math.max(0.1, Math.min(1, trafficOccupancy.value + (Math.random() - 0.5) * 0.08))
-  queueLength.value = Math.max(0, queueLength.value + (Math.random() - 0.5) * 10)
-
-  // Random alert generation
-  if (trafficOccupancy.value > 0.85 && Math.random() > 0.7) {
-    alerts.value.unshift({
-      alertType: '拥堵告警',
-      message: `${selectedId.value} 占用率 ${(trafficOccupancy.value * 100).toFixed(0)}%`,
-      severity: 'high',
-      time: new Date().toLocaleTimeString()
-    })
-    if (alerts.value.length > 20) alerts.value = alerts.value.slice(0, 20)
-  }
-
-  // Switch phase periodically
-  if (Math.random() > 0.95) {
-    currentPhaseId.value = currentPhaseId.value === 1 ? 2 : 1
+  try {
+    const snapshots = await fusionApi.getAllSnapshots()
+    if (snapshots?.length) {
+      backendOnline.value = true
+      const current = snapshots.find(s => s.intersectionId === selectedId.value)
+      if (current) applySnapshot(current)
+      allStatus.value = snapshots
+      for (const s of snapshots) {
+        if (s.occupancy > 0.85 && Math.random() > 0.7) {
+          alerts.value.unshift({
+            type: '拥堵', message: `${s.intersectionId} 占用率 ${(s.occupancy * 100).toFixed(0)}%`,
+            severity: 'high', time: new Date().toLocaleTimeString()
+          })
+        }
+      }
+      if (alerts.value.length > 20) alerts.value = alerts.value.slice(0, 20)
+    }
+  } catch (e) {
+    backendOnline.value = false
+    runLocalSimulation()
   }
 }
 
-async function loadData() {
-  if (!selectedId.value) return
+function runLocalSimulation() {
+  const hour = new Date().getHours()
+  const baseFactor = hour >= 7 && hour <= 9 ? 0.8 : hour >= 17 && hour <= 19 ? 0.8 : hour >= 22 || hour <= 5 ? 0.15 : 0.5
+  const factor = Math.max(0.05, Math.min(0.95, baseFactor + (Math.random() - 0.5) * 0.15))
+  const cap = 1700
+  trafficFlow.value = Math.round(factor * cap)
+  trafficSpeed.value = Math.round((factor < 0.3 ? 55 + Math.random() * 10 : factor < 0.6 ? 50 * (1 - 0.3 * (factor - 0.3) / 0.3) : 35 * (0.7 - 0.4 * (factor - 0.6) / 0.25)) * 10) / 10
+  trafficOccupancy.value = Math.round(Math.min(1, (factor < 0.1 ? factor * 2.5 : factor < 0.5 ? 0.25 + (factor - 0.1) * 0.75 : 0.55 + (factor - 0.5) * 1.0)) * 1000) / 1000
+  queueLength.value = Math.round((trafficOccupancy.value < 0.3 ? trafficOccupancy.value * 60 : 18 + (trafficOccupancy.value - 0.3) * 120) * 10) / 10
+  delay.value = Math.round((trafficOccupancy.value < 0.3 ? trafficOccupancy.value * 20 : 6 + (trafficOccupancy.value - 0.3) * 40) * 10) / 10
+  allStatus.value = [{ intersectionId: selectedId.value, flow: trafficFlow.value, speed: trafficSpeed.value, occupancy: trafficOccupancy.value, queueLength: queueLength.value, delay: delay.value, timestamp: Date.now() }]
+}
+
+function applySnapshot(snap) {
+  trafficFlow.value = snap.flow; trafficSpeed.value = snap.speed
+  trafficOccupancy.value = snap.occupancy; queueLength.value = snap.queueLength
+  delay.value = snap.delay; congestionLevel.value = snap.congestionLevel
+}
+
+async function loadIntersectionMeta() {
+  try {
+    const list = await fusionApi.listIntersectionInfo()
+    if (list?.length) {
+      intersections.value = list
+      const metaMap = {}
+      for (const item of list) metaMap[item.intersectionId] = item
+      intersectionMeta.value = metaMap
+      return
+    }
+  } catch (e) { /* fallback */ }
+  intersections.value = ['INT-001', 'INT-002', 'INT-003', 'INT-004', 'INT-005', 'INT-006', 'INT-007', 'INT-008', 'INT-009'].map(id => ({ intersectionId: id, name: id }))
+}
+
+async function loadSignalPlan() {
   try {
     const plan = await signalApi.getPlan(selectedId.value)
-    if (plan?.phases?.length) {
-      phases.value = plan.phases
-      currentPhaseId.value = plan.currentPhase || phases.value[0]?.phaseId
-    }
-    online.value = true
-  } catch (e) {
-    // Use demo data
-    online.value = false
-  }
+    if (plan?.phases?.length) { phases.value = plan.phases; currentPhaseId.value = plan.currentPhase || phases.value[0]?.phaseId }
+  } catch (e) { /* use defaults */ }
+}
+
+async function onIntersectionChange() {
+  show3d.value = false
+  await nextTick()
   show3d.value = true
+  loadSignalPlan()
+  fetchSimulationData()
 }
 
-async function loadIntersections() {
-  try {
-    intersections.value = await webApi.listIntersections() || []
-    if (!intersections.value.length) {
-      intersections.value = ['INT-001', 'INT-002', 'INT-003', 'INT-004'].map(id => ({ intersectionId: id, name: id }))
-    }
-  } catch (e) {
-    intersections.value = ['INT-001', 'INT-002', 'INT-003', 'INT-004'].map(id => ({ intersectionId: id, name: id }))
-  }
+async function refreshAllData() {
+  loading.value = true
+  await fetchSimulationData()
+  loading.value = false
 }
 
-onMounted(() => {
-  loadIntersections()
-  nextTick(() => loadData())
-  simTimer = setInterval(runSimulation, 1500)
+onMounted(async () => {
+  await loadIntersectionMeta()
+  if (intersections.value.length > 0) selectedId.value = intersections.value[0].intersectionId
+  await nextTick()
+  show3d.value = true
+  loadSignalPlan()
+  pollTimer = setInterval(fetchSimulationData, 2000)
+  fetchSimulationData()
+  setInterval(() => { currentTime.value = new Date().toLocaleTimeString() }, 1000)
 })
 
-onBeforeUnmount(() => {
-  clearInterval(simTimer)
-  clearInterval(alertTimer)
-})
+onBeforeUnmount(() => { clearInterval(pollTimer) })
 </script>
 
 <style scoped>
-.traffic-monitor { padding: 4px; }
-.control-bar { border-radius: 8px; }
-.status-bar { display: flex; gap: 8px; align-items: center; }
-.scene-card { border-radius: 8px; overflow: hidden; }
-.info-card { border-radius: 8px; }
-.info-card .el-card__body { padding: 16px; }
+.traffic-monitor { padding: 4px; height: calc(100vh - 100px); display: flex; flex-direction: column; gap: 4px; }
+.control-bar {
+  background: #fff; border: 1px solid #e4e7ed; padding: 8px 12px; flex-shrink: 0;
+}
+.control-row { display: flex; align-items: center; gap: 8px; }
+.status-tags { display: flex; align-items: center; gap: 6px; }
+.status-time { font-size: 12px; color: #909399; }
 
-.metric-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.metric-item {
-  display: flex; align-items: center; gap: 10px;
-  padding: 10px; border-radius: 8px; background: #f8f9fc;
-}
-.metric-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
-.metric-info { display: flex; flex-direction: column; }
-.metric-val { font-size: 20px; font-weight: bold; line-height: 1.2; }
-.metric-lbl { font-size: 11px; color: #909399; }
+.content-row { flex: 1; display: flex; gap: 4px; min-height: 0; }
+.scene-area { flex: 1; display: flex; }
+.scene-area.full { flex: 1; }
+.scene-panel { flex: 1; background: #fff; border: 1px solid #e4e7ed; overflow: hidden; }
+.scene-placeholder { height: 100%; display: flex; align-items: center; justify-content: center; color: #909399; font-size: 14px; }
 
-.phase-row {
-  display: flex; align-items: center; gap: 8px; padding: 8px;
-  border-radius: 6px; cursor: pointer; transition: all 0.2s;
-  border: 1px solid transparent; margin-bottom: 4px;
-}
-.phase-row:hover { background: #f0f5ff; border-color: #d9e6ff; }
-.phase-row.active { background: #ecf5ff; border-color: #409eff; }
-.phase-dir { font-weight: 600; width: 40px; font-size: 13px; }
-.phase-lights { flex: 1; display: flex; align-items: center; gap: 4px; }
-.phase-light {
-  height: 16px; border-radius: 3px; transition: all 0.3s;
-}
-.phase-light.red { width: 50px; background: #f0f0f0; }
-.phase-light.red.on { background: #f56c6c; box-shadow: 0 0 6px #f56c6c; }
-.phase-light.yellow { width: 16px; background: #f0f0f0; }
-.phase-light.yellow.on { background: #e6a23c; box-shadow: 0 0 6px #e6a23c; }
-.phase-light.green { width: 30px; background: #f0f0f0; }
-.phase-light.green.on { background: #67c23a; box-shadow: 0 0 6px #67c23a; }
-.phase-time { font-size: 12px; color: #909399; margin-left: auto; }
+.metrics-panel { width: 280px; min-width: 280px; background: #fff; border: 1px solid #e4e7ed; overflow-y: auto; display: flex; flex-direction: column; gap: 1px; }
+.panel-block { padding: 12px; border-bottom: 1px solid #f0f0f0; }
+.panel-block-title { font-size: 12px; font-weight: 600; color: #303133; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid #ebeef5; }
 
-.alert-panel { margin-top: 12px; border-radius: 8px; }
-.alert-scroll { max-height: 120px; overflow-y: auto; }
-.alert-row {
-  display: flex; align-items: center; gap: 8px; padding: 6px 8px;
-  font-size: 13px; border-bottom: 1px solid #f0f0f0;
-}
-.alert-row.high { background: #fef0f0; border-radius: 4px; }
-.alert-msg { flex: 1; }
-.alert-time { color: #909399; font-size: 12px; white-space: nowrap; }
+.metrics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.metric { padding: 8px; background: #fafafa; border-radius: 3px; }
+.metric-value { display: block; font-size: 20px; font-weight: 600; color: #303133; line-height: 1.2; }
+.metric-label { display: block; font-size: 11px; color: #909399; margin-top: 2px; }
+
+.phase-item { display: flex; align-items: center; gap: 6px; padding: 6px 4px; border-radius: 3px; cursor: pointer; border: 1px solid transparent; margin-bottom: 4px; }
+.phase-item:hover { background: #f5f7fa; }
+.phase-item.active { border-color: #409eff; background: #ecf5ff; }
+.phase-direction { width: 36px; font-size: 12px; font-weight: 600; flex-shrink: 0; }
+.phase-times { flex: 1; display: flex; height: 18px; border-radius: 3px; overflow: hidden; }
+.phase-seg { display: flex; align-items: center; justify-content: center; font-size: 10px; color: #fff; transition: width 0.3s; }
+.phase-seg.green { background: #e8f5e9; color: #67c23a; }
+.phase-seg.green.on { background: #67c23a; color: #fff; }
+.phase-seg.yellow { background: #fff3e0; color: #e6a23c; }
+.phase-seg.red { background: #ffebee; color: #f56c6c; }
+.phase-seg.red.on { background: #f56c6c; color: #fff; }
+
+.info-line { display: flex; justify-content: space-between; font-size: 12px; color: #606266; padding: 3px 0; border-bottom: 1px solid #f5f5f5; }
+
+.table-panel { flex: 1; background: #fff; border: 1px solid #e4e7ed; padding: 12px; }
+.table-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.table-title { font-size: 13px; font-weight: 600; color: #303133; }
+
+.alert-bar { background: #fff; border: 1px solid #e4e7ed; padding: 8px 12px; display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.alert-title { font-size: 12px; font-weight: 600; color: #f56c6c; white-space: nowrap; }
+.alert-list { display: flex; gap: 8px; overflow-x: auto; flex: 1; }
+.alert-item { display: flex; align-items: center; gap: 6px; font-size: 12px; white-space: nowrap; padding: 2px 6px; border-radius: 3px; }
+.alert-item.high { background: #fef0f0; }
+.alert-message { color: #606266; }
+.alert-time { color: #909399; font-size: 11px; }
 </style>

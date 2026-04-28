@@ -20,3 +20,5 @@ drl:
   target-update-freq: 100
   train-freq: 4
   green-time-step: 5
+  model:
+    dir: ./drl-models

@@ -15,9 +15,7 @@ public class PeriodicOptimizationTask {
 
     @Scheduled(fixedRate = 5000)
     public void executePeriodicOptimization() {
-        log.debug("Executing periodic optimization");
-        // For now, optimize a default intersection
-        // In production, this would iterate over all active intersections
+        log.debug("Periodic optimization triggered");
         coOptimizationAppService.triggerOptimization("ALL");
     }
 }

@@ -29,6 +29,10 @@ public class AgentManager {
         return agents.values();
     }
 
+    public void registerAgent(TrafficSignalAgent agent) {
+        agents.put(agent.getIntersectionId(), agent);
+    }
+
     public TrafficSignalAgent removeAgent(String intersectionId) {
         return agents.remove(intersectionId);
     }

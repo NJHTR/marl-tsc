@@ -15,6 +15,6 @@ public interface SignalControlClient {
     @GetMapping("/api/v1/signal/plans/{intersectionId}")
     ApiResult<SignalPlanResponse> getCurrentPlan(@PathVariable("intersectionId") String intersectionId);
     
-    @PostMapping("/api/v1/signal/phases/adjust")
+    @PostMapping("/api/v1/signal/plans/adjust")
     ApiResult<Void> adjustPhase(@RequestBody PhaseAdjustRequest request);
 }

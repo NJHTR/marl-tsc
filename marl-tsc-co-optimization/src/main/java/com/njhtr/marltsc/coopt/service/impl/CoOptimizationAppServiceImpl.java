@@ -7,16 +7,14 @@ import com.njhtr.marltsc.common.result.ApiResult;
 import com.njhtr.marltsc.coopt.api.dto.response.OptimizationResultResponse;
 import com.njhtr.marltsc.coopt.api.dto.response.RouteAdjustmentResponse;
 import com.njhtr.marltsc.coopt.api.dto.response.SignalActionResponse;
-import com.njhtr.marltsc.coopt.domain.bo.*;
 import com.njhtr.marltsc.coopt.domain.entity.OptimizationLog;
-import com.njhtr.marltsc.coopt.domain.service.CoOptimizationDomainService;
+import com.njhtr.marltsc.coopt.domain.service.RewardCalculator;
+import com.njhtr.marltsc.coopt.domain.service.StateVectorBuilder;
 import com.njhtr.marltsc.coopt.event.publisher.OptimizationEventPublisher;
-import com.njhtr.marltsc.coopt.infrastructure.client.RoutePlanningClient;
+import com.njhtr.marltsc.coopt.infrastructure.client.DataFusionClient;
+import com.njhtr.marltsc.coopt.infrastructure.client.DrlEngineClient;
 import com.njhtr.marltsc.coopt.infrastructure.client.SignalControlClient;
-import com.njhtr.marltsc.coopt.infrastructure.client.dto.PhaseAdjustRequest;
-import com.njhtr.marltsc.coopt.infrastructure.client.dto.RouteRequest;
-import com.njhtr.marltsc.coopt.infrastructure.client.dto.RouteResponse;
-import com.njhtr.marltsc.coopt.infrastructure.client.dto.SignalPlanResponse;
+import com.njhtr.marltsc.coopt.infrastructure.client.dto.*;
 import com.njhtr.marltsc.coopt.infrastructure.mapper.OptimizationLogMapper;
 import com.njhtr.marltsc.coopt.service.api.CoOptimizationAppService;
 import lombok.RequiredArgsConstructor;
@@ -31,148 +29,155 @@ import java.util.*;
 @RequiredArgsConstructor
 public class CoOptimizationAppServiceImpl implements CoOptimizationAppService {
 
+    private static final int GREEN_TIME_STEP = 5;
+    private static final int DEFAULT_GREEN_TIME = 30;
+    private static final int DEFAULT_CYCLE_TIME = 120;
+
     private final SignalControlClient signalControlClient;
-    private final RoutePlanningClient routePlanningClient;
+    private final DataFusionClient dataFusionClient;
+    private final DrlEngineClient drlEngineClient;
     private final OptimizationLogMapper optimizationLogMapper;
     private final OptimizationEventPublisher eventPublisher;
-    private final CoOptimizationDomainService domainService = new CoOptimizationDomainService();
+    private final StateVectorBuilder stateVectorBuilder;
+    private final RewardCalculator rewardCalculator;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private final Map<String, OptimizationResultResponse> latestResults = new HashMap<>();
 
     @Override
     public void triggerOptimization(String intersectionId) {
-        log.info("Triggering optimization for intersection: {}", intersectionId);
-
-        // 获取信号控制计划,失败时使用null
-        SignalPlanResponse currentPlan = null;
-        try {
-            ApiResult<SignalPlanResponse> planResult = signalControlClient.getCurrentPlan(intersectionId);
-            currentPlan = planResult != null && planResult.getData() != null ? planResult.getData() : null;
-        } catch (Exception e) {
-            log.warn("Failed to get signal plan for intersection {}, proceeding without it: {}", intersectionId, e.getMessage());
+        if ("ALL".equals(intersectionId)) {
+            triggerForAllIntersections();
+        } else {
+            optimizeSingle(intersectionId);
         }
+    }
 
-        // 获取路网状态,失败时使用空Map降级
-        Map<String, Double> networkStatus = Collections.emptyMap();
-        try {
-            ApiResult<Map<String, Double>> statusResult = routePlanningClient.getNetworkStatus();
-            networkStatus = statusResult != null && statusResult.getData() != null ? statusResult.getData() : Collections.emptyMap();
-        } catch (Exception e) {
-            log.warn("Failed to get network status, using empty map as fallback: {}", e.getMessage());
+    private void triggerForAllIntersections() {
+        List<TrafficSnapshotResponse> snapshots = fetchAllSnapshots();
+        if (snapshots.isEmpty()) {
+            log.debug("No traffic snapshots available, skipping periodic optimization");
+            return;
         }
-
-        PredictedNetworkStateBO currentState = new PredictedNetworkStateBO();
-        currentState.setSegmentTravelTimes(new HashMap<>(networkStatus));
-        currentState.setSegmentCongestionProbs(new HashMap<>());
-
-        JointOptimizationBO jointBO = new JointOptimizationBO();
-        jointBO.setIntersectionId(intersectionId);
-        if (currentPlan != null) {
-            SignalPlanBO planBO = new SignalPlanBO();
-            planBO.setPlanId(currentPlan.getPlanId());
-            planBO.setIntersectionId(currentPlan.getIntersectionId());
-            planBO.setCycleTime(currentPlan.getCycleTime());
-            jointBO.setCurrentSignalPlan(planBO);
-        }
-        jointBO.setPredictedNetworkState(currentState);
-
-        Map<String, SignalActionBO> signalActions = new HashMap<>();
-        Map<String, RouteChangeBO> routeChanges = new HashMap<>();
-
-        PredictedNetworkStateBO previousState = null;
-        PredictedNetworkStateBO predictedState = currentState;
-        int iterations = 0;
-        double bestReward = Double.NEGATIVE_INFINITY;
-        SignalActionBO bestSignalAction = null;
-
-        while (iterations < 3) {
-            iterations++;
-
-            SignalActionBO signalAction = new SignalActionBO();
-            signalAction.setPhaseId(1);
-            signalAction.setGreenTime(30 + iterations * 10);
-            signalActions.put(intersectionId, signalAction);
-
-            previousState = predictedState;
-            predictedState = domainService.predictNetworkState(predictedState, signalActions);
-
-            RouteChangeBO routeChange = new RouteChangeBO();
-            routeChange.setVehicleId("vehicle_" + iterations);
-            routeChange.setNewRoute(Arrays.asList(intersectionId, "next_" + intersectionId));
-            routeChanges.put(routeChange.getVehicleId(), routeChange);
-
-            double reward = domainService.evaluateJointPolicy(signalActions, routeChanges);
-            if (reward > bestReward) {
-                bestReward = reward;
-                bestSignalAction = signalAction;
-            }
-
-            if (domainService.isConverged(previousState, predictedState)) {
-                log.info("Optimization converged after {} iterations", iterations);
-                break;
-            }
-        }
-
-        // 应用信号控制调整,失败时记录警告但继续执行
-        if (bestSignalAction != null) {
+        for (TrafficSnapshotResponse snap : snapshots) {
             try {
-                PhaseAdjustRequest adjustRequest = new PhaseAdjustRequest();
-                adjustRequest.setIntersectionId(intersectionId);
-                adjustRequest.setPhaseId(bestSignalAction.getPhaseId());
-                adjustRequest.setGreenTime(bestSignalAction.getGreenTime());
-                signalControlClient.adjustPhase(adjustRequest);
+                optimizeWithSnapshot(snap);
             } catch (Exception e) {
-                log.warn("Failed to adjust signal phase for intersection {}: {}", intersectionId, e.getMessage());
+                log.warn("Optimization failed for {}: {}", snap.getIntersectionId(), e.getMessage());
             }
         }
+    }
 
-        List<RouteAdjustmentResponse> routeAdjustments = new ArrayList<>();
-        for (RouteChangeBO rc : routeChanges.values()) {
-            RouteRequest routeRequest = new RouteRequest();
-            routeRequest.setOrigin(rc.getVehicleId());
-            routeRequest.setDestination("dest_" + rc.getVehicleId());
-            try {
-                ApiResult<RouteResponse> routeResult = routePlanningClient.computeRoute(routeRequest);
-                if (routeResult != null && routeResult.getData() != null) {
-                    RouteAdjustmentResponse adj = new RouteAdjustmentResponse();
-                    adj.setVehicleId(rc.getVehicleId());
-                    adj.setNewPath(rc.getNewRoute());
-                    adj.setEstimatedTimeSaved(10.0);
-                    routeAdjustments.add(adj);
-                }
-            } catch (Exception e) {
-                log.warn("Failed to compute route for vehicle {}", rc.getVehicleId());
+    private void optimizeSingle(String intersectionId) {
+        TrafficSnapshotResponse snap = fetchSnapshot(intersectionId);
+        if (snap == null) {
+            log.warn("No traffic snapshot for {}, skipping", intersectionId);
+            return;
+        }
+        optimizeWithSnapshot(snap);
+    }
+
+    /**
+     * Core DRL-driven optimization for a single intersection:
+     * traffic snapshot → state vector → DRL decide → execute → reward → DRL train
+     */
+    private void optimizeWithSnapshot(TrafficSnapshotResponse snap) {
+        String intersectionId = snap.getIntersectionId();
+
+        int cycleTime = DEFAULT_CYCLE_TIME;
+        int currentGreen = DEFAULT_GREEN_TIME;
+        String planId = intersectionId;
+
+        SignalPlanResponse plan = fetchSignalPlan(intersectionId);
+        if (plan != null) {
+            planId = plan.getPlanId();
+            cycleTime = plan.getCycleTime() != null ? plan.getCycleTime() : DEFAULT_CYCLE_TIME;
+        }
+
+        double[] state = stateVectorBuilder.build(
+                snap.getFlow(), snap.getSpeed(), snap.getOccupancy(),
+                snap.getQueueLength(), snap.getDelay(),
+                currentGreen, cycleTime);
+
+        DrlInferenceRequest inferReq = new DrlInferenceRequest(intersectionId, state);
+        int action;
+        int greenTime;
+        double confidence = 0;
+        try {
+            ApiResult<DrlActionResponse> result = drlEngineClient.decide(inferReq);
+            if (result != null && result.getData() != null) {
+                action = result.getData().getAction();
+                greenTime = actionToGreenTime(action);
+                confidence = result.getData().getConfidence();
+                log.info("DRL decided: {} action={} green={}s conf={}", intersectionId, action, greenTime, String.format("%.2f", confidence));
+            } else {
+                action = 1;
+                greenTime = DEFAULT_GREEN_TIME;
+                log.info("DRL returned empty, using default green={}s for {}", greenTime, intersectionId);
             }
+        } catch (Exception e) {
+            action = 1;
+            greenTime = DEFAULT_GREEN_TIME;
+            log.warn("DRL decide failed for {}, using default: {}", intersectionId, e.getMessage());
+        }
+
+        try {
+            PhaseAdjustRequest adjustReq = new PhaseAdjustRequest();
+            adjustReq.setPlanId(planId);
+            adjustReq.setIntersectionId(intersectionId);
+            adjustReq.setPhaseId(1);
+            adjustReq.setSuggestedGreenTime(greenTime);
+            signalControlClient.adjustPhase(adjustReq);
+        } catch (Exception e) {
+            log.warn("Signal adjust failed for {}: {}", intersectionId, e.getMessage());
+        }
+
+        double reward = rewardCalculator.compute(
+                snap.getFlow(), snap.getSpeed(), snap.getOccupancy(),
+                snap.getQueueLength(), snap.getDelay());
+
+        DrlTrainRequest trainReq = new DrlTrainRequest(intersectionId, state, action, reward, state, false);
+        try {
+            drlEngineClient.train(trainReq);
+        } catch (Exception e) {
+            log.warn("DRL train failed for {}: {}", intersectionId, e.getMessage());
         }
 
         OptimizationLog logEntity = new OptimizationLog();
         logEntity.setLogId(UUID.randomUUID().toString());
         logEntity.setTriggerTime(LocalDateTime.now());
         logEntity.setIntersectionId(intersectionId);
-        logEntity.setJointReward(bestReward);
+        logEntity.setJointReward(reward);
         try {
-            logEntity.setSignalActionJson(objectMapper.writeValueAsString(bestSignalAction));
-            logEntity.setRouteActionJson(objectMapper.writeValueAsString(routeChanges));
+            Map<String, Object> actionMap = new LinkedHashMap<>();
+            actionMap.put("action", action);
+            actionMap.put("greenTime", greenTime);
+            actionMap.put("confidence", confidence);
+            actionMap.put("occupancy", snap.getOccupancy());
+            actionMap.put("congestion", snap.getCongestionLevel());
+            logEntity.setSignalActionJson(objectMapper.writeValueAsString(actionMap));
+            logEntity.setRouteActionJson("{}");
         } catch (JsonProcessingException e) {
             log.warn("Failed to serialize actions", e);
         }
         logEntity.setStatus(1);
-        optimizationLogMapper.insert(logEntity);
+        try {
+            optimizationLogMapper.insert(logEntity);
+        } catch (Exception e) {
+            log.warn("Failed to persist optimization log: {}", e.getMessage());
+        }
 
         OptimizationResultResponse response = new OptimizationResultResponse();
         response.setLogId(logEntity.getLogId());
         response.setIntersectionId(intersectionId);
         response.setTriggerTime(logEntity.getTriggerTime());
-        response.setJointReward(bestReward);
-        if (bestSignalAction != null) {
-            SignalActionResponse sar = new SignalActionResponse();
-            sar.setPhaseId(bestSignalAction.getPhaseId());
-            sar.setGreenTime(bestSignalAction.getGreenTime());
-            response.setSignalAction(sar);
-        }
-        response.setRouteAdjustments(routeAdjustments);
-        response.setConvergenceIterations(iterations);
+        response.setJointReward(reward);
+        SignalActionResponse sar = new SignalActionResponse();
+        sar.setPhaseId(1);
+        sar.setGreenTime(greenTime);
+        response.setSignalAction(sar);
+        response.setRouteAdjustments(Collections.emptyList());
+        response.setConvergenceIterations(1);
 
         latestResults.put(intersectionId, response);
         eventPublisher.publishOptimizationCompleted(response);
@@ -185,5 +190,39 @@ public class CoOptimizationAppServiceImpl implements CoOptimizationAppService {
             throw new BusinessException(404, "No optimization result found for intersection: " + intersectionId);
         }
         return result;
+    }
+
+    private List<TrafficSnapshotResponse> fetchAllSnapshots() {
+        try {
+            ApiResult<List<TrafficSnapshotResponse>> result = dataFusionClient.getAllSnapshots();
+            return result != null && result.getData() != null ? result.getData() : Collections.emptyList();
+        } catch (Exception e) {
+            log.warn("Failed to fetch traffic snapshots: {}", e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
+    private TrafficSnapshotResponse fetchSnapshot(String intersectionId) {
+        try {
+            ApiResult<TrafficSnapshotResponse> result = dataFusionClient.getSnapshot(intersectionId);
+            return result != null ? result.getData() : null;
+        } catch (Exception e) {
+            log.warn("Failed to fetch snapshot for {}: {}", intersectionId, e.getMessage());
+            return null;
+        }
+    }
+
+    private SignalPlanResponse fetchSignalPlan(String intersectionId) {
+        try {
+            ApiResult<SignalPlanResponse> result = signalControlClient.getCurrentPlan(intersectionId);
+            return result != null ? result.getData() : null;
+        } catch (Exception e) {
+            log.warn("Failed to fetch signal plan for {}: {}", intersectionId, e.getMessage());
+            return null;
+        }
+    }
+
+    static int actionToGreenTime(int action) {
+        return (3 + action * 2) * GREEN_TIME_STEP;
     }
 }

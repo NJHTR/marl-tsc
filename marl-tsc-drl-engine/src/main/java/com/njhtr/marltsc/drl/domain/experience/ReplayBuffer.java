@@ -46,4 +46,19 @@ public class ReplayBuffer {
         buffer.clear();
         position = 0;
     }
+
+    public synchronized List<Experience> getAll() {
+        return new ArrayList<>(buffer);
+    }
+
+    public synchronized void addAll(List<Experience> experiences) {
+        for (Experience e : experiences) {
+            if (buffer.size() < capacity) {
+                buffer.add(e);
+            } else {
+                buffer.set(position, e);
+                position = (position + 1) % capacity;
+            }
+        }
+    }
 }

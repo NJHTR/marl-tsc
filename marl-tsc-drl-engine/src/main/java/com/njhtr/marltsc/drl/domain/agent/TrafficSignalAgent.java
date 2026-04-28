@@ -122,10 +122,25 @@ public class TrafficSignalAgent {
     public String getIntersectionId() { return intersectionId; }
     public double getEpsilon() { return epsilon; }
     public int getTotalSteps() { return totalSteps; }
+    public int getTrainSteps() { return trainSteps; }
     public int getReplayBufferSize() { return replayBuffer.size(); }
     public boolean isTrainingMode() { return trainingMode; }
     public void setTrainingMode(boolean trainingMode) { this.trainingMode = trainingMode; }
     public DQNModel getPolicyNetwork() { return policyNetwork; }
+    public ReplayBuffer getReplayBuffer() { return replayBuffer; }
+
+    public static TrafficSignalAgent restore(String intersectionId, DrlConfig config,
+                                              DQNModel policyNet, ReplayBuffer buffer,
+                                              double epsilon, int totalSteps,
+                                              int trainSteps, boolean trainingMode) {
+        TrafficSignalAgent agent = new TrafficSignalAgent(intersectionId, config, policyNet);
+        agent.replayBuffer.addAll(buffer.getAll());
+        agent.epsilon = epsilon;
+        agent.totalSteps = totalSteps;
+        agent.trainSteps = trainSteps;
+        agent.trainingMode = trainingMode;
+        return agent;
+    }
 
     public void reset() {
         this.epsilon = config.getEpsilonInit();

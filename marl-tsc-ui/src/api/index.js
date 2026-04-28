@@ -55,7 +55,12 @@ export const routeApi = {
 export const fusionApi = {
   getFeatures: (id) => api.get(`/api/v1/fusion/features/${id}`),
   getState: (id) => api.get(`/api/v1/fusion/state/${id}`),
-  ingest: (data) => api.post('/api/v1/fusion/ingest', data)
+  ingest: (data) => api.post('/api/v1/fusion/ingest', data),
+  // Simulation endpoints (real-time traffic simulation engine)
+  listIntersectionInfo: () => api.get('/api/v1/fusion/simulation/intersections'),
+  getAllSnapshots: () => api.get('/api/v1/fusion/simulation/all'),
+  getSnapshot: (id) => api.get(`/api/v1/fusion/simulation/${id}`),
+  getIntersectionInfo: (id) => api.get(`/api/v1/fusion/simulation/intersection/${id}`)
 }
 
 // === Co-Optimization (port 8083) ===
